@@ -1,0 +1,134 @@
+{
+    "Description" : "create alb test template",
+    "Parameters" : {
+        "Env" : {
+            "Type" : "String",
+            "Default" : "vertica-mc-01"
+        },
+        "VPCID" : {
+            "Type" : "AWS::EC2::VPC::Id",
+            "Default" : "vpc-f545d491"
+        },
+        "Subnets" : {
+            "Type" : "List<AWS::EC2::Subnet::Id>",
+            "Default" : "subnet-bd809696,subnet-c9dd10bf"
+        },
+        "Keypair" : {
+            "Type" : "AWS::EC2::KeyPair::KeyName",
+            "Default" : "aws-nvirginia_002"
+        },
+        "MyInstance01" : {
+            "Type" : "String",
+            "Default" : "i-07ff0908aef3b035c"
+        },
+        "MyInstance02" : {
+            "Type" : "String",
+            "Default" : "i-04dddc3a548c2e83d"
+        }
+    },
+    "Resources" : {
+        "ALBSG" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "GroupDescription" : "-",
+                "SecurityGroupIngress" : [
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : "80",
+                        "ToPort" : "80",
+                        "CidrIp" : "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : "443",
+                        "ToPort" : "443",
+                        "CidrIp" : "0.0.0.0/0"
+                    }
+                ],
+                "Tags" : [
+                    {"Key" : "Name" , "Value" : { "Fn::Join" : [ "", [{ "Ref": "Env" }, "-ALBSG"]]} }
+                ],
+                "VpcId" : { "Ref": "VPCID" }
+            }
+        },
+        "AppSG" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "GroupDescription" : "-",
+                "SecurityGroupIngress" : [ 
+                {
+                    "IpProtocol" : "tcp",
+                    "FromPort" : "80",
+                    "ToPort" : "80",
+                    "SourceSecurityGroupId" : { "Ref" : "ALBSG" }
+                }
+                ],
+                "Tags" : [
+                    {"Key": "Name", "Value": { "Fn::Join" : [ "", [{ "Ref": "Env" }, "-AppSG"]]} }
+                ],
+                    "VpcId" : { "Ref": "VPCID" }
+            }
+        },
+        "ALBTarget" : {
+            "Type" : "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties" : {
+                "HealthCheckIntervalSeconds" : "30",
+                "HealthCheckPath" : "/webui/login",
+                "HealthCheckPort" : "traffic-port",
+                "HealthCheckProtocol" : "HTTPS",
+                "HealthCheckTimeoutSeconds" : "5",
+                "HealthyThresholdCount" : "5",
+                "Matcher" : { "HttpCode" : "200" },
+                "Name" : { "Fn::Join" : [ "", [{ "Ref": "Env" }, "-ALBTarget"]]},
+                "Port" : "5450",
+                "Protocol" : "HTTPS",
+                "Tags" : [
+                    {"Key": "Name", "Value": { "Fn::Join" : [ "", [{ "Ref": "Env" }, "-ALBTarget"]]} }
+                ],
+                "TargetGroupAttributes" : [
+                    { "Key" : "deregistration_delay.timeout_seconds", "Value" : "300" },
+                    { "Key" : "stickiness.enabled", "Value" : "false" },
+                    { "Key" : "stickiness.type", "Value" : "lb_cookie" },
+                    { "Key" : "stickiness.lb_cookie.duration_seconds", "Value" : "86400" }
+                ],
+                "Targets" : [
+                    { "Id" : { "Ref" : "MyInstance01" }, "Port" : "5450" },
+                    { "Id" : { "Ref" : "MyInstance02" }, "Port" : "5450" }
+                ],
+                "UnhealthyThresholdCount" : "2",
+                "VpcId" : { "Ref": "VPCID" }
+            }
+        },
+        "ALB" : {
+            "Type" : "AWS::ElasticLoadBalancingV2::LoadBalancer",
+            "Properties" : {
+                "LoadBalancerAttributes" : [
+                    { "Key" : "access_logs.s3.enabled", "Value" : "false" },
+                    { "Key" : "deletion_protection.enabled", "Value" : "false" },
+                    { "Key" : "idle_timeout.timeout_seconds", "Value" : "60" }
+                ],
+                "Name" : { "Fn::Join" : [ "", [{ "Ref": "Env" }, "-ALB"]]},
+                "Scheme" : "internet-facing",
+                "SecurityGroups" : [
+                    { "Ref": "ALBSG" }
+                ],
+                "Subnets" : { "Ref": "Subnets" },
+                "Tags" : [
+                    {"Key": "Name", "Value": { "Fn::Join" : [ "", [{ "Ref": "Env" }, "-ALB"]]} }
+                ]
+            }
+        },
+        "ALBListener" : {
+            "Type" : "AWS::ElasticLoadBalancingV2::Listener",
+            "Properties" : {
+                "DefaultActions" : [{
+                    "TargetGroupArn" : { "Ref" : "ALBTarget" },
+                    "Type" : "forward"
+                }],
+                "LoadBalancerArn" : { "Ref" : "ALB" },
+                "Port" : "80",
+                "Protocol" : "HTTP"
+            }
+        }
+    }
+}
