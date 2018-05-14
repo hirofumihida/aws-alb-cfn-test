@@ -24,6 +24,10 @@
         "MyInstance02" : {
             "Type" : "String",
             "Default" : "i-04dddc3a548c2e83d"
+        },
+        "CertificateArn1" : {
+            "Type" : "String",
+            "Default" : "arn:aws:acm:us-east-1:942162428772:certificate/c9e2d2d0-d837-494b-ad53-d7bf09483afd"
         }
     },
     "Resources" : {
@@ -74,7 +78,7 @@
             "Properties" : {
                 "HealthCheckIntervalSeconds" : "30",
                 "HealthCheckPath" : "/webui/login",
-                "HealthCheckPort" : "traffic-port",
+                "HealthCheckPort" : "5450",
                 "HealthCheckProtocol" : "HTTPS",
                 "HealthCheckTimeoutSeconds" : "5",
                 "HealthyThresholdCount" : "5",
@@ -125,9 +129,17 @@
                     "TargetGroupArn" : { "Ref" : "ALBTarget" },
                     "Type" : "forward"
                 }],
+                "Certificates" : [
+                    {
+                        "CertificateArn" : {
+                            "Ref" : "CertificateArn1"
+                        }
+                    }
+                ],
                 "LoadBalancerArn" : { "Ref" : "ALB" },
-                "Port" : "80",
-                "Protocol" : "HTTP"
+                "Port" : "443",
+                "Protocol" : "HTTPS",
+                "SslPolicy" : "ELBSecurityPolicy-2016-08"
             }
         }
     }
