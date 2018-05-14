@@ -28,6 +28,14 @@
         "CertificateArn1" : {
             "Type" : "String",
             "Default" : "arn:aws:acm:us-east-1:942162428772:certificate/c9e2d2d0-d837-494b-ad53-d7bf09483afd"
+        },
+        "Hostname" : {
+            "Type" : "String",
+            "Default" : "vertica01.hirfm.net."
+        },
+        "HostedZoneName" : {
+            "Type" : "String",
+            "Default" : "hirfm.net."
         }
     },
     "Resources" : {
@@ -140,6 +148,19 @@
                 "Port" : "443",
                 "Protocol" : "HTTPS",
                 "SslPolicy" : "ELBSecurityPolicy-2016-08"
+            }
+        },
+        "DnsRecord" : {
+            "Type" : "AWS::Route53::RecordSet",
+            "Properties" : {
+                "HostedZoneName" : { "Ref" : "HostedZoneName" },
+                "Comment" : "DNS name for ALB",
+                "Name" : { "Ref" : "Hostname" },
+                 "Type" : "CNAME",
+                 "TTL" : "300",
+                 "ResourceRecords" : [
+                     { "Fn::GetAtt" : [ "ALB", "DNSName" ] }
+                 ]
             }
         }
     }
